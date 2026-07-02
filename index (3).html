@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>YOHAKU PLAY 01 — 余白ビンゴ</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F8F4EC; --surface:#FFFDF8; --green:#7EAE8F; --green-lt:#D6EAD9;
+  --green-dk:#4A7A5C; --pink:#E8B4C0; --pink-lt:#FAE8EC;
+  --beige:#D4C9B0; --beige-lt:#EDE8DA; --text:#3A3530; --muted:#8A8278;
+  --r-sm:8px; --r-md:14px; --r-lg:20px;
+  --sh:0 2px 12px rgba(58,53,48,.08); --tr:all .22s ease;
+}
+body {
+  font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Noto Sans JP',sans-serif;
+  background:var(--bg); color:var(--text); min-height:100dvh;
+  display:flex; flex-direction:column; align-items:center;
+  padding:0 0 60px; -webkit-font-smoothing:antialiased;
+}
+.screen { display:none; width:100%; max-width:480px; padding:0 16px; flex-direction:column; align-items:center; }
+.screen.active { display:flex; }
+#screen-top { min-height:100dvh; justify-content:center; }
+.top-deco { font-size:52px; margin-bottom:12px; animation:float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+.top-eyebrow { font-size:11px; letter-spacing:.18em; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
+.top-title { font-size:32px; font-weight:700; letter-spacing:.06em; color:var(--green-dk); line-height:1.1; margin-bottom:4px; }
+.top-sub { font-size:18px; color:var(--muted); margin-bottom:28px; }
+.top-copy { font-size:14px; color:var(--muted); line-height:1.8; text-align:center; margin-bottom:40px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; cursor:pointer; font-family:inherit; transition:var(--tr); outline:none; }
+.btn:focus-visible { box-shadow:0 0 0 3px rgba(126,174,143,.4); }
+.btn-primary { background:var(--green); color:#fff; font-size:16px; font-weight:600; padding:14px 44px; border-radius:50px; letter-spacing:.04em; box-shadow:0 4px 16px rgba(74,122,92,.25); }
+.btn-primary:hover { background:var(--green-dk); transform:translateY(-1px); }
+.btn-primary:active { transform:translateY(0) scale(.98); }
+.btn-ghost { background:transparent; color:var(--muted); font-size:12px; padding:8px 16px; border-radius:var(--r-sm); border:1px solid var(--beige); }
+.btn-ghost:hover { background:var(--beige-lt); color:var(--text); }
+.btn-danger-ghost { background:transparent; color:#C9857A; font-size:11px; padding:6px 12px; border-radius:var(--r-sm); border:1px solid #E8BEB9; }
+.btn-danger-ghost:hover { background:#FAF0EE; }
+#screen-game { padding-top:16px; gap:0; }
+.game-header { display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:12px; }
+.game-logo { font-size:13px; font-weight:700; letter-spacing:.12em; color:var(--green-dk); text-transform:uppercase; }
+.status-bar { display:flex; gap:8px; width:100%; margin-bottom:12px; }
+.stat-card { flex:1; background:var(--surface); border-radius:var(--r-md); padding:8px 10px; text-align:center; border:1px solid var(--beige-lt); box-shadow:var(--sh); }
+.stat-label { font-size:9px; color:var(--muted); letter-spacing:.06em; margin-bottom:2px; }
+.stat-val { font-size:18px; font-weight:700; color:var(--green-dk); }
+.garden-card { width:100%; border-radius:var(--r-lg); overflow:hidden; margin-bottom:12px; position:relative; border:1px solid rgba(126,174,143,.25); box-shadow:0 4px 20px rgba(74,122,92,.10); }
+#garden-canvas { display:block; width:100%; height:150px; }
+.garden-label { position:absolute; bottom:8px; right:12px; font-size:9px; letter-spacing:.08em; color:rgba(74,122,92,.5); }
+.garden-stage-badge { position:absolute; top:8px; left:12px; background:rgba(255,253,248,.88); border-radius:50px; padding:3px 10px; font-size:10px; font-weight:700; color:var(--green-dk); letter-spacing:.04em; backdrop-filter:blur(4px); }
+.garden-season-badge { position:absolute; top:8px; right:12px; background:rgba(255,253,248,.88); border-radius:50px; padding:3px 10px; font-size:10px; color:var(--muted); letter-spacing:.04em; backdrop-filter:blur(4px); }
+.bingo-grid { width:100%; display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-bottom:12px; }
+.bingo-cell { aspect-ratio:1; background:var(--surface); border-radius:var(--r-sm); border:1.5px solid var(--beige-lt); display:flex; align-items:center; justify-content:center; padding:4px 3px; cursor:pointer; transition:var(--tr); position:relative; overflow:hidden; -webkit-tap-highlight-color:transparent; user-select:none; }
+.bingo-cell:hover:not(.checked):not(.free):not(.bingo-line) { border-color:var(--green); background:var(--green-lt); transform:scale(1.04); }
+.bingo-cell.checked { background:var(--green-lt); border-color:var(--green); }
+.bingo-cell.free { background:linear-gradient(135deg,var(--pink-lt),#FFF5F7); border-color:var(--pink); cursor:default; }
+.bingo-cell.bingo-line { background:var(--green); border-color:var(--green-dk); }
+.bingo-cell.bingo-line .cell-text { color:#fff; font-weight:600; }
+.bingo-cell.pop-anim { animation:pop .35s cubic-bezier(.34,1.56,.64,1) forwards; }
+@keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.15)} 100%{transform:scale(1)} }
+.bingo-cell.bingo-flash { animation:bflash .6s ease forwards; }
+@keyframes bflash { 0%{transform:scale(1)} 20%{transform:scale(1.2)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
+.cell-text { font-size:9.5px; line-height:1.35; text-align:center; color:var(--text); word-break:break-all; }
+.bingo-cell.checked .cell-text { color:var(--green-dk); font-weight:600; }
+.cell-check { position:absolute; top:3px; right:4px; font-size:9px; opacity:0; transition:opacity .2s; color:var(--green-dk); }
+.bingo-cell.checked .cell-check { opacity:1; }
+.free-label { font-size:8px; color:var(--pink); font-weight:700; letter-spacing:.06em; display:block; margin-bottom:1px; }
+.msg-box { width:100%; background:var(--surface); border-radius:var(--r-md); padding:12px 18px; margin-bottom:10px; border:1px solid var(--beige-lt); box-shadow:var(--sh); min-height:50px; display:flex; align-items:center; }
+.msg-text { font-size:13px; color:var(--muted); line-height:1.7; text-align:center; width:100%; }
+.type-card { width:100%; background:var(--surface); border-radius:var(--r-md); padding:12px 18px; margin-bottom:10px; border:1px solid var(--beige-lt); box-shadow:var(--sh); }
+.type-label { font-size:10px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px; }
+.type-name { font-size:15px; font-weight:700; color:var(--green-dk); margin-bottom:4px; }
+.type-desc { font-size:12px; color:var(--muted); line-height:1.7; }
+.reset-area { width:100%; display:flex; gap:10px; margin-top:4px; justify-content:center; flex-wrap:wrap; }
+.footer-sig { font-size:11px; color:var(--beige); margin-top:24px; letter-spacing:.12em; }
+#confetti-canvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:90; }
+.bingo-toast { position:fixed; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .3s; }
+.bingo-toast.show { opacity:1; pointer-events:auto; }
+.toast-backdrop { position:absolute; inset:0; background:rgba(248,244,236,.75); backdrop-filter:blur(6px); }
+.toast-inner { position:relative; z-index:1; background:var(--surface); border-radius:28px; padding:36px 28px 28px; max-width:320px; width:92%; text-align:center; box-shadow:0 12px 60px rgba(74,122,92,.18),0 2px 16px rgba(58,53,48,.08); transform:scale(.8) translateY(20px); transition:transform .45s cubic-bezier(.34,1.56,.64,1); }
+.bingo-toast.show .toast-inner { transform:scale(1) translateY(0); }
+.toast-flowers { font-size:42px; margin-bottom:6px; display:flex; justify-content:center; gap:4px; animation:toast-bloom .6s ease .15s both; }
+@keyframes toast-bloom { 0%{transform:scale(.4) rotate(-10deg);opacity:0} 70%{transform:scale(1.15) rotate(3deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
+.toast-bingo-badge { display:inline-block; background:var(--green); color:#fff; font-size:11px; font-weight:700; letter-spacing:.12em; padding:4px 14px; border-radius:50px; margin-bottom:12px; animation:badge-pop .4s cubic-bezier(.34,1.56,.64,1) .3s both; }
+@keyframes badge-pop { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
+.toast-title { font-size:15px; font-weight:700; color:var(--green-dk); line-height:1.6; margin-bottom:10px; }
+.toast-msg { font-size:13px; color:var(--muted); line-height:1.8; margin-bottom:24px; padding:0 4px; }
+.toast-close { background:var(--green); color:#fff; font-size:14px; font-weight:600; padding:12px 36px; border-radius:50px; border:none; cursor:pointer; font-family:inherit; box-shadow:0 4px 16px rgba(74,122,92,.3); transition:all .2s; }
+.toast-close:hover { background:var(--green-dk); transform:translateY(-1px); }
+.toast-close:active { transform:scale(.97); }
+.toast-ring { position:absolute; top:-8px; left:50%; transform:translateX(-50%); width:80px; height:80px; pointer-events:none; }
+.ring-particle { position:absolute; top:50%; left:50%; font-size:16px; animation:ring-fly 1s ease-out both; }
+@keyframes ring-fly { 0%{transform:translate(-50%,-50%) scale(0) rotate(0deg);opacity:1} 70%{opacity:1} 100%{transform:translate(var(--tx),var(--ty)) scale(1) rotate(var(--rot));opacity:0} }
+@media(max-width:360px){ .cell-text{font-size:8.5px} .bingo-grid{gap:4px} }
+
+/* ── 感想フォーム ── */
+#screen-feedback { padding-top:20px; gap:0; }
+.fb-header { width:100%; display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+.fb-back { background:transparent; border:1px solid var(--beige); border-radius:50px; padding:6px 14px; font-size:12px; color:var(--muted); cursor:pointer; font-family:inherit; transition:var(--tr); }
+.fb-back:hover { background:var(--beige-lt); }
+.fb-title { font-size:16px; font-weight:700; color:var(--green-dk); letter-spacing:.04em; }
+.fb-card { width:100%; background:var(--surface); border-radius:var(--r-md); padding:18px 18px 16px; margin-bottom:12px; border:1px solid var(--beige-lt); box-shadow:var(--sh); }
+.fb-q { font-size:13px; font-weight:600; color:var(--text); line-height:1.6; margin-bottom:14px; }
+.fb-q span { font-size:10px; font-weight:400; color:var(--muted); margin-left:6px; }
+/* スライダー */
+.fb-slider-wrap { padding:0 4px; }
+.fb-slider { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px; background:var(--beige-lt); outline:none; cursor:pointer; }
+.fb-slider::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:var(--green); box-shadow:0 2px 8px rgba(74,122,92,.3); cursor:pointer; }
+.fb-slider::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:var(--green); border:none; cursor:pointer; }
+.fb-slider-labels { display:flex; justify-content:space-between; margin-top:8px; }
+.fb-slider-labels span { font-size:10px; color:var(--muted); }
+.fb-slider-val { text-align:center; margin-top:10px; font-size:13px; font-weight:700; color:var(--green-dk); min-height:20px; }
+/* 選択肢ボタン */
+.fb-choices { display:flex; flex-direction:column; gap:8px; }
+.fb-choice { background:var(--bg); border:1.5px solid var(--beige-lt); border-radius:10px; padding:11px 16px; font-size:13px; color:var(--text); cursor:pointer; font-family:inherit; transition:var(--tr); text-align:left; }
+.fb-choice:hover { border-color:var(--green); background:var(--green-lt); }
+.fb-choice.selected { border-color:var(--green); background:var(--green-lt); color:var(--green-dk); font-weight:600; }
+/* 星評価 */
+.fb-stars { display:flex; gap:8px; justify-content:center; }
+.fb-star { font-size:28px; cursor:pointer; opacity:.3; transition:all .15s; line-height:1; }
+.fb-star.lit { opacity:1; }
+/* 続けたい */
+.fb-yn { display:flex; gap:8px; flex-wrap:wrap; }
+.fb-yn-btn { flex:1; min-width:80px; background:var(--bg); border:1.5px solid var(--beige-lt); border-radius:10px; padding:10px 8px; font-size:13px; color:var(--text); cursor:pointer; font-family:inherit; transition:var(--tr); text-align:center; }
+.fb-yn-btn:hover { border-color:var(--green); background:var(--green-lt); }
+.fb-yn-btn.selected { border-color:var(--green); background:var(--green-lt); color:var(--green-dk); font-weight:600; }
+/* テキスト */
+.fb-textarea { width:100%; border:1.5px solid var(--beige-lt); border-radius:10px; padding:12px 14px; font-size:13px; font-family:inherit; color:var(--text); background:var(--bg); resize:none; outline:none; line-height:1.7; transition:border-color .2s; }
+.fb-textarea:focus { border-color:var(--green); }
+.fb-textarea::placeholder { color:var(--beige); }
+/* 送信ボタン */
+.fb-submit { width:100%; background:var(--green); color:#fff; font-size:15px; font-weight:600; padding:14px; border-radius:50px; border:none; cursor:pointer; font-family:inherit; transition:var(--tr); box-shadow:0 4px 16px rgba(74,122,92,.25); margin-top:4px; }
+.fb-submit:hover { background:var(--green-dk); transform:translateY(-1px); }
+.fb-submit:active { transform:scale(.98); }
+.fb-submit:disabled { background:var(--beige); box-shadow:none; cursor:default; transform:none; }
+/* 送信完了 */
+.fb-done { width:100%; text-align:center; padding:40px 20px; }
+.fb-done-emoji { font-size:52px; margin-bottom:16px; }
+.fb-done-title { font-size:18px; font-weight:700; color:var(--green-dk); margin-bottom:10px; }
+.fb-done-msg { font-size:13px; color:var(--muted); line-height:1.8; margin-bottom:28px; }
+/* 感想ボタン（ゲーム画面） */
+.btn-feedback { background:var(--green-lt); color:var(--green-dk); font-size:12px; font-weight:600; padding:9px 20px; border-radius:50px; border:1.5px solid rgba(126,174,143,.4); cursor:pointer; font-family:inherit; transition:var(--tr); }
+.btn-feedback:hover { background:var(--green); color:#fff; }
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+
+<section id="screen-top" class="screen active">
+  <div style="text-align:center">
+    <div class="top-deco">🌿</div>
+    <p class="top-eyebrow">YOHAKU PLAY 01</p>
+    <h1 class="top-title">余白ビンゴ</h1>
+    <p class="top-sub">Yohaku Bingo</p>
+    <p class="top-copy">今日の中に、<br>小さな余白をひとつ見つけよう。</p>
+    <button class="btn btn-primary" onclick="startGame()">はじめる</button>
+    <p style="font-size:11px;color:var(--beige);margin-top:48px;letter-spacing:.08em">よはくの庭師になろう</p>
+  </div>
+</section>
+
+<section id="screen-game" class="screen">
+  <div class="game-header">
+    <span class="game-logo">余白ビンゴ</span>
+    <span id="today-date" style="font-size:11px;color:var(--muted)"></span>
+  </div>
+  <div class="status-bar">
+    <div class="stat-card"><div class="stat-label">今日の余白</div><div class="stat-val" id="stat-checked">0</div></div>
+    <div class="stat-card"><div class="stat-label">今日のビンゴ</div><div class="stat-val" id="stat-bingo-today">0</div></div>
+    <div class="stat-card"><div class="stat-label">累計ビンゴ</div><div class="stat-val" id="stat-bingo-total">0</div></div>
+  </div>
+  <div class="garden-card">
+    <canvas id="garden-canvas"></canvas>
+    <div class="garden-stage-badge" id="garden-badge">余白のたね</div>
+    <div class="garden-season-badge" id="garden-season">春</div>
+    <div class="garden-label">余白の庭</div>
+  </div>
+  <div class="bingo-grid" id="bingo-grid"></div>
+  <div class="msg-box"><p class="msg-text" id="msg-text">おかえりなさい。今日も、小さな余白をひとつ見つけてみましょう。</p></div>
+  <div class="type-card">
+    <div class="type-label">最近の余白タイプ</div>
+    <div class="type-name" id="type-name">—</div>
+    <div class="type-desc" id="type-desc">余白タイプは、もう少し遊ぶと見えてきます。</div>
+  </div>
+  <div class="reset-area">
+    <button class="btn btn-ghost" onclick="resetToday()">今日のビンゴをリセット</button>
+    <button class="btn btn-danger-ghost" onclick="resetAll()">すべての記録をリセット</button>
+  </div>
+  <!-- 感想ボタン -->
+  <div style="margin-top:16px;width:100%;display:flex;justify-content:center;">
+    <button class="btn-feedback" onclick="openFeedback()">💬 感想を送る</button>
+  </div>
+  <p class="footer-sig">― くぅ ―</p>
+</section>
+
+<!-- ══════════ 感想フォーム画面 ══════════ -->
+<section id="screen-feedback" class="screen">
+  <div class="fb-header">
+    <button class="fb-back" onclick="closeFeedback()">← もどる</button>
+    <span class="fb-title">余白の感想</span>
+  </div>
+
+  <!-- Q1: 小さな変化スライダー -->
+  <div class="fb-card">
+    <div class="fb-q">利用して、小さな変化（行動・気持ち・考え）はどれくらいありましたか？</div>
+    <div class="fb-slider-wrap">
+      <input class="fb-slider" type="range" id="fb-change" min="0" max="10" value="5"
+             oninput="updateSlider(this.value)">
+      <div class="fb-slider-labels"><span>まったくない</span><span>とてもある</span></div>
+      <div class="fb-slider-val" id="fb-change-label">少しある</div>
+    </div>
+  </div>
+
+  <!-- Q2: やりやすかったアクション -->
+  <div class="fb-card">
+    <div class="fb-q">一番やりやすかった余白アクションは？<span>（ひとつ選んでください）</span></div>
+    <div class="fb-choices" id="fb-action-choices">
+      <button class="fb-choice" onclick="selectChoice('action',this,'自然を感じる（空・緑・風など）')">🌿 自然を感じる（空・緑・風など）</button>
+      <button class="fb-choice" onclick="selectChoice('action',this,'体を動かす・整える（呼吸・散歩など）')">🚶 体を動かす・整える（呼吸・散歩など）</button>
+      <button class="fb-choice" onclick="selectChoice('action',this,'味わう・香る（飲み物・香りなど）')">☕ 味わう・香る（飲み物・香りなど）</button>
+      <button class="fb-choice" onclick="selectChoice('action',this,'思考を休める（ぼーっとする・手放すなど）')">🌙 思考を休める（ぼーっとする・手放すなど）</button>
+      <button class="fb-choice" onclick="selectChoice('action',this,'自分をいたわる（ねぎらう・認めるなど）')">💛 自分をいたわる（ねぎらう・認めるなど）</button>
+      <button class="fb-choice" onclick="selectChoice('action',this,'文化・つながり（音楽・本・ありがとうなど）')">🎵 文化・つながり（音楽・本・ありがとうなど）</button>
+    </div>
+  </div>
+
+  <!-- Q3: 庭のアニメーション -->
+  <div class="fb-card">
+    <div class="fb-q">「余白の庭」のアニメーションはどうでしたか？</div>
+    <div class="fb-stars" id="fb-stars">
+      <span class="fb-star" onclick="selectStar(1)">🌸</span>
+      <span class="fb-star" onclick="selectStar(2)">🌸</span>
+      <span class="fb-star" onclick="selectStar(3)">🌸</span>
+      <span class="fb-star" onclick="selectStar(4)">🌸</span>
+      <span class="fb-star" onclick="selectStar(5)">🌸</span>
+    </div>
+    <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--muted)" id="fb-star-label">タップして評価</div>
+  </div>
+
+  <!-- Q4: 続けたいか -->
+  <div class="fb-card">
+    <div class="fb-q">このアプリ、続けてみたいと思いますか？</div>
+    <div class="fb-yn">
+      <button class="fb-yn-btn" onclick="selectChoice('continue',this,'はい、続けたい')">🌱 はい</button>
+      <button class="fb-yn-btn" onclick="selectChoice('continue',this,'まあ、続けてもいい')">🌿 まあ</button>
+      <button class="fb-yn-btn" onclick="selectChoice('continue',this,'まだわからない')">🤍 まだわからない</button>
+    </div>
+  </div>
+
+  <!-- Q5: 一言感想 -->
+  <div class="fb-card">
+    <div class="fb-q">一言感想<span>（任意）</span></div>
+    <textarea class="fb-textarea" id="fb-comment" rows="3"
+              placeholder="気になったこと、よかったこと、なんでも…"></textarea>
+  </div>
+
+  <button class="fb-submit" id="fb-submit-btn" onclick="submitFeedback()">感想を送る 🌿</button>
+  <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.7">
+    送信内容は今後のバージョンアップに活用させていただきます。<br>個人を特定する情報は含まれません。
+  </p>
+  <p class="footer-sig">― くぅ ―</p>
+</section>
+
+<div class="bingo-toast" id="bingo-toast">
+  <div class="toast-backdrop" onclick="closeToast()"></div>
+  <div class="toast-inner">
+    <div class="toast-ring" id="toast-ring"></div>
+    <div class="toast-flowers" id="toast-flowers">🌸</div>
+    <div class="toast-bingo-badge">B I N G O</div>
+    <div class="toast-title">今日の中に、<br>ちゃんと余白がありました。</div>
+    <div class="toast-msg" id="toast-msg"></div>
+    <button class="toast-close" onclick="closeToast()">ありがとう 🌿</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   CELL POOL
+═══════════════════════════════════════ */
+const ALL_CELLS=[
+  {id:1,text:"空を見上げた",cat:"nature"},{id:2,text:"深呼吸3回",cat:"body"},
+  {id:3,text:"水をゆっくり飲んだ",cat:"taste"},{id:4,text:"鳥や風の音を聞いた",cat:"nature"},
+  {id:5,text:"スマホを10分置いた",cat:"mind"},{id:6,text:"肩を回した",cat:"body"},
+  {id:7,text:"「疲れた」と認めた",cat:"emotion"},{id:8,text:"好きな音楽を聴いた",cat:"culture"},
+  {id:9,text:"笑った",cat:"connect"},{id:10,text:"窓を開けた",cat:"nature"},
+  {id:11,text:"5分散歩した",cat:"body"},{id:12,text:"自分をねぎらった",cat:"emotion"},
+  {id:14,text:"ストレッチした",cat:"body"},{id:15,text:"「今日はここまで」にした",cat:"mind"},
+  {id:16,text:"花や緑を見た",cat:"nature"},{id:17,text:"温かい飲み物を飲んだ",cat:"taste"},
+  {id:18,text:"本を2ページ読んだ",cat:"culture"},{id:19,text:"誰かにありがとうを伝えた",cat:"connect"},
+  {id:20,text:"ゆっくり呼吸した",cat:"body"},{id:21,text:"夜空を見た",cat:"nature"},
+  {id:22,text:"ぼーっとする時間を作った",cat:"mind"},{id:23,text:"「大丈夫」と言った",cat:"emotion"},
+  {id:24,text:"好きな香りを楽しんだ",cat:"taste"},{id:25,text:"横になって休めた",cat:"body"},
+  {id:26,text:"日差しを感じた",cat:"nature"},{id:27,text:"雨の音を聞いた",cat:"nature"},
+  {id:28,text:"季節の変わり目に気づいた",cat:"nature"},{id:29,text:"木や葉っぱに触れた",cat:"nature"},
+  {id:30,text:"足首をゆっくり回した",cat:"body"},{id:31,text:"背筋をそっと伸ばした",cat:"body"},
+  {id:32,text:"手のひらを眺めた",cat:"body"},{id:33,text:"目を閉じて1分すごした",cat:"mind"},
+  {id:34,text:"今日のよかったことを一つ思い出した",cat:"emotion"},{id:35,text:"自分に「お疲れ様」と言った",cat:"emotion"},
+  {id:36,text:"好きな場所を思い浮かべた",cat:"mind"},{id:37,text:"甘いものをひとつ食べた",cat:"taste"},
+  {id:38,text:"好きな色を見つけた",cat:"culture"},{id:39,text:"好きな言葉を思い出した",cat:"culture"},
+  {id:40,text:"誰かの笑顔を思い出した",cat:"connect"},{id:41,text:"ひとりの時間を楽しんだ",cat:"mind"},
+  {id:42,text:"小さな音に気づいた",cat:"nature"},{id:43,text:"今日の空の色を覚えた",cat:"nature"},
+  {id:44,text:"ゆっくりお風呂に入った",cat:"body"},{id:45,text:"好きな映像や写真を見た",cat:"culture"},
+  {id:46,text:"日記に一行書いた",cat:"culture"},{id:47,text:"誰かのことを思った",cat:"connect"},
+  {id:48,text:"今の自分を受け入れた",cat:"emotion"},{id:49,text:"明日の小さな楽しみを考えた",cat:"mind"},
+  {id:50,text:"「まあいいか」と思えた",cat:"emotion"},
+];
+const FREE_CELL={id:0,text:"FREE\n今日の余白",cat:"free",free:true};
+const LINES=[
+  [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],
+  [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
+  [0,6,12,18,24],[4,8,12,16,20],
+];
+const MESSAGES=[
+  "一つ見つけられたら、それで十分です。","今日は少し、自分を大切にできましたね。",
+  "心は急がなくても大丈夫。","小さな余白が、明日の力になります。",
+  "休むことも、大切な一歩です。","今日のあなたに、やさしい風が通りました。",
+  "ちゃんと立ち止まれましたね。","がんばる以外の時間も、あなたの大切な時間です。",
+  "何もしない時間にも、意味があります。","あなたらしい余白が育っています。",
+];
+const TYPE_MAP={
+  nature:{name:"森タイプ",desc:"自然や季節を感じることで整いやすい傾向があるようです。"},
+  body:{name:"散歩タイプ",desc:"体を動かしたり、感覚に意識を向けることで整いやすい傾向があるようです。"},
+  taste:{name:"カフェタイプ",desc:"味わいや香りなど、五感をゆっくり楽しむことで整いやすい傾向があるようです。"},
+  mind:{name:"星空タイプ",desc:"思考をいったん手放し、ぼーっとする時間を大切にする傾向があるようです。"},
+  emotion:{name:"灯りタイプ",desc:"自分の気持ちに正直に寄り添うことで整いやすい傾向があるようです。"},
+  connect:{name:"対話タイプ",desc:"誰かとつながったり、笑いを共有することで整いやすい傾向があるようです。"},
+  culture:{name:"アートタイプ",desc:"音楽や本など、文化的なものに触れることで整いやすい傾向があるようです。"},
+};
+
+/* ═══════════════════════════════════════
+   STORAGE
+═══════════════════════════════════════ */
+const K_CHECKED="yb2_checked",K_BINGO_TODAY="yb2_bingo_today",K_BINGO_TOTAL="yb2_bingo_total",
+      K_CAT_COUNTS="yb2_cat_counts",K_SAVE_DATE="yb2_save_date",K_DAILY_SEED="yb2_daily_seed";
+function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function seededRng(seed){let s=seed;return()=>{s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/4294967296;};}
+function dateToSeed(str){return str.split("-").reduce((a,v)=>a*100+parseInt(v),0);}
+function buildDailyLayout(dateStr){
+  const rng=seededRng(dateToSeed(dateStr)),pool=[...ALL_CELLS];
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  const chosen=pool.slice(0,24);
+  for(let i=chosen.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[chosen[i],chosen[j]]=[chosen[j],chosen[i]];}
+  chosen.splice(12,0,FREE_CELL); return chosen;
+}
+let CELLS=[],state={};
+function loadState(){
+  const savedDate=localStorage.getItem(K_SAVE_DATE)||"",td=todayStr();
+  if(savedDate!==td){
+    CELLS=buildDailyLayout(td);
+    localStorage.setItem(K_DAILY_SEED,JSON.stringify(CELLS.map(c=>c.id)));
+    return{checked:CELLS.map(c=>!!c.free),todayBingos:0,
+      totalBingos:parseInt(localStorage.getItem(K_BINGO_TOTAL)||"0"),
+      catCounts:JSON.parse(localStorage.getItem(K_CAT_COUNTS)||"{}") };
+  }
+  const seedIds=JSON.parse(localStorage.getItem(K_DAILY_SEED)||"null");
+  if(seedIds){const m=Object.fromEntries([FREE_CELL,...ALL_CELLS].map(c=>[c.id,c]));CELLS=seedIds.map(id=>m[id]||FREE_CELL);}
+  else CELLS=buildDailyLayout(td);
+  return{
+    checked:JSON.parse(localStorage.getItem(K_CHECKED)||"null")||CELLS.map(c=>!!c.free),
+    todayBingos:parseInt(localStorage.getItem(K_BINGO_TODAY)||"0"),
+    totalBingos:parseInt(localStorage.getItem(K_BINGO_TOTAL)||"0"),
+    catCounts:JSON.parse(localStorage.getItem(K_CAT_COUNTS)||"{}"),
+  };
+}
+function saveState(){
+  localStorage.setItem(K_CHECKED,JSON.stringify(state.checked));
+  localStorage.setItem(K_BINGO_TODAY,String(state.todayBingos));
+  localStorage.setItem(K_BINGO_TOTAL,String(state.totalBingos));
+  localStorage.setItem(K_CAT_COUNTS,JSON.stringify(state.catCounts));
+  localStorage.setItem(K_SAVE_DATE,todayStr());
+}
+
+/* ═══════════════════════════════════════
+   SEASON SYSTEM
+═══════════════════════════════════════ */
+function getSeason(){
+  const m=new Date().getMonth()+1;
+  if(m>=3&&m<=5) return "spring";
+  if(m>=6&&m<=8) return "summer";
+  if(m>=9&&m<=11) return "autumn";
+  return "winter";
+}
+const SEASON_LABEL={spring:"春 🌸",summer:"夏 🌿",autumn:"秋 🍂",winter:"冬 ❄️"};
+
+/* 季節パレット */
+const SEASON_PAL={
+  spring:{
+    sky0:"#EEF6FF",sky1:"#D6EAD9",ground:"#C9B99A",
+    grassA:"#7EAE8F",grassB:"#4A7A5C",grassC:"#B7D9B0",
+    leafA:"#7EAE8F",leafB:"#4A7A5C",
+    flowerCols:["#F4B8C8","#F9D4DC","#FFE0E8","#FFF0B3","#E8F5C8"],
+    petalCol:"#F4B8C8",
+    bark:"#8B6554",
+    sunCol:"#FFE066",sunGlow:"rgba(255,230,120,0.06)",
+    fogCol:null,
+    snowCol:null,
+    waterA:"#A8D8EA",waterB:"#7BC8DF",
+  },
+  summer:{
+    sky0:"#C8E6F8",sky1:"#B5DEB5",ground:"#B8A882",
+    grassA:"#4A8C6A",grassB:"#2D6644",grassC:"#78C890",
+    leafA:"#3A8C5A",leafB:"#2D6644",
+    flowerCols:["#FFD700","#FFB300","#FF8C42","#FFF176","#A5D6A7"],
+    petalCol:"#FFD700",
+    bark:"#7A5C44",
+    sunCol:"#FFD700",sunGlow:"rgba(255,210,80,0.08)",
+    fogCol:null,snowCol:null,
+    waterA:"#7EC8E3",waterB:"#4AAEC8",
+  },
+  autumn:{
+    sky0:"#F5E6C8",sky1:"#E8D4A8",ground:"#C4AA80",
+    grassA:"#B8860B",grassB:"#8B6914",grassC:"#DAA520",
+    leafA:"#C8641E",leafB:"#A0522D",
+    flowerCols:["#E07820","#C85A14","#E8A040","#F0C860","#D4724A"],
+    petalCol:"#E07820",
+    bark:"#6B4226",
+    sunCol:"#FFB347",sunGlow:"rgba(255,180,80,0.06)",
+    fogCol:"rgba(200,180,150,0.12)",snowCol:null,
+    waterA:"#8BBCCC",waterB:"#6A9EAC",
+  },
+  winter:{
+    sky0:"#E8EEF8",sky1:"#D4DCE8",ground:"#D8D0C0",
+    grassA:"#9AAA9A",grassB:"#708070",grassC:"#B8C4B8",
+    leafA:"#6A8C6A",leafB:"#4A6A4A",
+    flowerCols:["#E8EEF8","#D0D8E8","#F0F4F8","#C8E0F0","#E0EAF4"],
+    petalCol:"#DDEEFF",
+    bark:"#705A4A",
+    sunCol:"#E8E0CC",sunGlow:"rgba(220,210,190,0.05)",
+    fogCol:"rgba(220,230,245,0.18)",snowCol:"rgba(240,248,255,0.92)",
+    waterA:"#A8C0D8",waterB:"#8AACC4",
+  },
+};
+
+/* ═══════════════════════════════════════
+   GARDEN ENGINE
+═══════════════════════════════════════ */
+const GC=document.getElementById("garden-canvas");
+const GX=GC.getContext("2d");
+let GW=0,GH=0,gAF=null,gLayout={},gSeason="spring";
+let gBirds=[],gButterflies=[],gFireflies=[],gFish=[],gCritters=[],gCats=[],gDogs=[],gParticles=[];
+
+/* ステージ名テーブル（0〜19+） */
+function getStageName(tb){
+  if(tb===0) return "余白のたね";
+  if(tb<=2)  return "芝が芽吹く";
+  if(tb<=4)  return "野の花が咲く";
+  if(tb<=6)  return "低木が育つ";
+  if(tb<=8)  return "小川が流れる";
+  if(tb<=10) return "木が育った";
+  if(tb<=12) return "蛍・猫が来た";
+  if(tb<=14) return "魚・犬が来た";
+  if(tb<=16) return "虹がかかる";
+  if(tb<=18) return "小動物が来た";
+  return "満開の庭";
+}
+
+const rnd=(a,b)=>Math.random()*(b-a)+a;
+const rndI=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+/* ── 月相計算（実際の日付から） ── */
+function getMoonPhase(){
+  const known=new Date(2000,0,6,18,14,0);
+  const diff=(Date.now()-known.getTime())/(1000*60*60*24);
+  return((diff%29.53058867)+29.53058867)%29.53058867;
+}
+
+/* ── 月を月相で描く ── */
+function drawMoon(mx,my,mr,skyTop,alpha){
+  const phase=getMoonPhase();
+  const ill=phase/29.53058867;
+  const waxing=ill<=0.5;
+  const lit=waxing?(ill*2):(1-(ill-0.5)*2);
+  GX.save();GX.globalAlpha=alpha*(0.15+lit*0.85);
+  GX.beginPath();GX.arc(mx,my,mr,0,Math.PI*2);GX.fillStyle="rgba(255,249,200,0.92)";GX.fill();
+  if(lit<0.97){
+    GX.save();GX.beginPath();GX.arc(mx,my,mr,0,Math.PI*2);GX.clip();
+    const sDir=waxing?1:-1;
+    const kx=mx+sDir*mr*Math.abs(1-lit*2)*1.33;
+    GX.beginPath();GX.arc(mx,my,mr,Math.PI/2,Math.PI*3/2);
+    GX.bezierCurveTo(kx,my-mr,kx,my+mr,mx,my+mr);
+    GX.closePath();GX.fillStyle=skyTop;GX.fill();
+    GX.restore();
+  }
+  GX.restore();
+}
+
+/* ── 密度係数（累計ビンゴで増加、上限なし） ── */
+function density(){return Math.min(6, 1 + state.totalBingos * 0.22);}
+
+/* ── 静的レイアウト計算 ── */
+function computeLayout(){
+  const dpr=devicePixelRatio||1;
+  GW=GC.offsetWidth; GH=GC.offsetHeight;
+  GC.width=GW*dpr; GC.height=GH*dpr;
+  GX.setTransform(dpr,0,0,dpr,0,0);
+  const ground=GH*.70, w=GW, h=GH;
+  const d=density();
+
+  /* 木の配置（密度で本数増加、最大8本） */
+  const treeCount=Math.min(8, Math.floor(1+d*.8));
+  const trees=[];
+  for(let i=0;i<treeCount;i++){
+    const xBase=w*(0.08+i/(treeCount)*0.84);
+    trees.push({x:xBase+rnd(-w*.04,w*.04), y:ground, size:h*(0.20+rnd(.02,.09)),
+      swayOff:rnd(0,Math.PI*2)});
+  }
+
+  /* 低木 */
+  const shrubCount=Math.min(10,Math.floor(1+d*1.2));
+  const shrubs=[];
+  for(let i=0;i<shrubCount;i++) shrubs.push({x:rnd(w*.02,w*.98),y:ground,r:h*(0.07+rnd(.01,.06)),swayOff:rnd(0,Math.PI*2)});
+
+  /* 芝 */
+  const grassCount=Math.min(120,Math.floor(20+d*18));
+  const grassTufts=[];
+  for(let i=0;i<grassCount;i++) grassTufts.push({x:rnd(0,w),y:ground+rnd(-2,4),h:rnd(5,14),off:rnd(0,Math.PI*2)});
+
+  /* 芽 */
+  const sproutCount=Math.min(18,Math.floor(3+d*2));
+  const sprouts=[];
+  for(let i=0;i<sproutCount;i++) sprouts.push({x:rnd(w*.04,w*.96),y:ground,off:rnd(0,Math.PI*2)});
+
+  /* 花 */
+  const flowerCount=Math.min(80,Math.floor(8+d*12));
+  const flowers=[];
+  for(let i=0;i<flowerCount;i++) flowers.push({x:rnd(0,w),y:ground-rnd(0,10),h:rnd(8,22),off:rnd(0,Math.PI*2),colIdx:rndI(0,4)});
+
+  /* 星 */
+  const stars=[];
+  for(let i=0;i<80;i++) stars.push({x:rnd(0,w),y:rnd(0,ground*.85),r:rnd(.5,2),tp:rnd(0,Math.PI*2)});
+
+  /* 雪粒 */
+  const snowflakes=[];
+  for(let i=0;i<Math.min(120,Math.floor(30+d*15));i++)
+    snowflakes.push({x:rnd(0,w),y:rnd(-h,h),r:rnd(.8,2.8),vx:rnd(-.3,.3),vy:rnd(.3,1.2),off:rnd(0,Math.PI*2)});
+
+  /* 虹 */
+  const rainbowX=w*.5, rainbowY=ground;
+
+  /* 川 */
+  const riverY=ground+h*.06;
+
+  gLayout={w,h,ground,trees,shrubs,grassTufts,sprouts,flowers,stars,snowflakes,rainbowX,rainbowY,riverY};
+}
+
+/* ── ドロー部品 ── */
+function drawTree(x,y,size,t,pal,swayOff,tb){
+  const sway=Math.sin(t*.7+swayOff)*.012*size;
+  const isWinter=gSeason==="winter";
+  const isAutumn=gSeason==="autumn";
+  GX.save(); GX.translate(x,y);
+  /* 幹 */
+  GX.beginPath();
+  GX.moveTo(-size*.08,0); GX.lineTo(-size*.07,-size*.48);
+  GX.lineTo(size*.07,-size*.48); GX.lineTo(size*.08,0);
+  GX.fillStyle=pal.bark; GX.fill();
+  /* 冬：枝だけ描く */
+  if(isWinter){
+    [[-.3,-.5],[.25,-.52],[-.2,-.7],[.18,-.68],[0,-.82]].forEach(([bx,by])=>{
+      GX.beginPath();
+      GX.moveTo(bx*size*.6+sway*8,by*size);
+      GX.lineTo((bx+rnd(-.15,.15))*size+sway*12,(by-.18)*size);
+      GX.strokeStyle=pal.bark; GX.lineWidth=1.5; GX.stroke();
+    });
+    /* 雪帽子 */
+    GX.beginPath(); GX.ellipse(sway*8,-size*.5,size*.22,size*.07,0,0,Math.PI*2);
+    GX.fillStyle="rgba(240,248,255,0.85)"; GX.fill();
+    GX.restore(); return;
+  }
+  /* 葉3層 */
+  const lc=isAutumn?[pal.leafA,pal.leafB,"#B8440A"]:[pal.leafA,pal.leafB,pal.leafA];
+  [[size*.46,-size*.44],[size*.36,-size*.64],[size*.24,-size*.8]].forEach(({0:r,1:oy},i)=>{
+    GX.save(); GX.translate(sway*(i+1)*10,0);
+    GX.beginPath(); GX.arc(0,oy,r,0,Math.PI*2);
+    GX.fillStyle=lc[i]; GX.fill(); GX.restore();
+  });
+  /* 春：桜の花 */
+  if(gSeason==="spring"&&tb>=4){
+    for(let i=0;i<6;i++){
+      const fx=rnd(-size*.35,size*.35),fy=rnd(-size*.8,-size*.3);
+      GX.beginPath(); GX.arc(fx+sway*8,fy,2.5,0,Math.PI*2);
+      GX.fillStyle="rgba(244,184,200,0.85)"; GX.fill();
+    }
+  }
+  /* 夏：実 */
+  if(gSeason==="summer"&&tb>=12){
+    for(let i=0;i<4;i++){
+      const fx=rnd(-size*.3,size*.3),fy=rnd(-size*.7,-size*.35);
+      GX.beginPath(); GX.arc(fx+sway*6,fy,3,0,Math.PI*2);
+      GX.fillStyle="rgba(220,80,80,0.85)"; GX.fill();
+    }
+  }
+  GX.restore();
+}
+
+function drawShrub(x,y,r,t,pal,swayOff){
+  const sway=Math.sin(t*.9+swayOff)*.008*r;
+  GX.save(); GX.translate(x+sway*20,y);
+  GX.beginPath(); GX.arc(-r*.15,-r*.35,r*.72,Math.PI,0);
+  GX.fillStyle=pal.leafA; GX.fill();
+  GX.beginPath(); GX.arc(r*.2,-r*.25,r*.55,Math.PI,0);
+  GX.fillStyle=pal.leafB; GX.fill();
+  /* 冬：雪 */
+  if(gSeason==="winter"){
+    GX.beginPath(); GX.ellipse(0,-r*.6,r*.55,r*.18,0,0,Math.PI*2);
+    GX.fillStyle="rgba(240,248,255,0.7)"; GX.fill();
+  }
+  GX.restore();
+}
+
+function drawWildFlower(x,y,h,col,t,off){
+  const sway=Math.sin(t*1.1+off)*1.6;
+  GX.save(); GX.translate(x,y);
+  GX.beginPath(); GX.moveTo(0,0); GX.lineTo(sway,-h);
+  GX.strokeStyle=gSeason==="winter"?"rgba(150,170,150,0.4)":SEASON_PAL[gSeason].grassB;
+  GX.lineWidth=1.2; GX.stroke();
+  if(gSeason!=="winter"){
+    GX.beginPath(); GX.arc(sway,-h,3.2,0,Math.PI*2);
+    GX.fillStyle=col; GX.fill();
+  } else {
+    GX.beginPath(); GX.arc(sway,-h,2.5,0,Math.PI*2);
+    GX.fillStyle="rgba(200,220,240,0.6)"; GX.fill();
+  }
+  GX.restore();
+}
+
+function drawGrass(x,y,h,t,off,pal){
+  const sway=Math.sin(t*1.2+off)*2;
+  GX.beginPath(); GX.moveTo(x,y);
+  GX.quadraticCurveTo(x+sway,y-h*.55,x+sway*2,y-h);
+  GX.strokeStyle=Math.random()<.5?pal.grassA:pal.grassC;
+  GX.lineWidth=1.2; GX.stroke();
+}
+
+function drawSprout(x,y,t,off,pal){
+  const sway=Math.sin(t+off)*1.2;
+  GX.beginPath(); GX.moveTo(x,y); GX.lineTo(x+sway,y-10);
+  GX.strokeStyle=pal.grassB; GX.lineWidth=1.5; GX.stroke();
+  GX.beginPath(); GX.ellipse(x+sway+3,y-12,4,2.8,-.5,0,Math.PI*2);
+  GX.fillStyle=pal.leafA; GX.fill();
+}
+
+/* ── 蛍クラス ── */
+class Firefly{
+  constructor(){this.reset();}
+  reset(){this.x=rnd(GW*.05,GW*.95);this.y=rnd(GH*.3,GH*.65);this.vx=rnd(-.25,.25);this.vy=rnd(-.2,.2);this.phase=rnd(0,Math.PI*2);this.blinkSpeed=rnd(1.5,3);}
+  update(){this.x+=this.vx+Math.sin(Date.now()*.0008+this.phase)*.3;this.y+=this.vy+Math.cos(Date.now()*.0007+this.phase)*.2;if(this.x<5||this.x>GW-5)this.vx*=-1;if(this.y<GH*.15||this.y>GH*.72)this.vy*=-1;}
+  draw(t){const b=.5+.5*Math.sin(t*this.blinkSpeed+this.phase);const r=b*4;GX.beginPath();GX.arc(this.x,this.y,r,0,Math.PI*2);const g=GX.createRadialGradient(this.x,this.y,0,this.x,this.y,r*3);g.addColorStop(0,`rgba(200,255,150,${b*.9})`);g.addColorStop(1,"rgba(180,255,100,0)");GX.fillStyle=g;GX.fill();}
+}
+
+/* ── 魚クラス ── */
+class Fish{
+  constructor(){this.reset(true);}
+  reset(init=false){this.x=init?rnd(0,GW):-20;this.dir=Math.random()<.5?1:-1;if(!init){this.x=this.dir>0?-20:GW+20;}this.y=gLayout.riverY?gLayout.riverY+rnd(4,14):GH*.76;this.vx=rnd(.1,.25)*this.dir;this.phase=rnd(0,Math.PI*2);this.size=rnd(6,12);this.col=`hsl(${rndI(180,220)},60%,55%)`;}
+  update(){this.x+=this.vx+Math.sin(Date.now()*.003+this.phase)*.2;this.phase+=.02;if(this.x<-30||this.x>GW+30)this.reset();}
+  draw(){GX.save();GX.translate(this.x,this.y+(Math.sin(this.phase)*2));if(this.dir<0)GX.scale(-1,1);GX.fillStyle=this.col;GX.beginPath();GX.ellipse(0,0,this.size,this.size*.4,0,0,Math.PI*2);GX.fill();GX.beginPath();GX.moveTo(-this.size*.8,0);GX.lineTo(-this.size*1.3,-this.size*.35);GX.lineTo(-this.size*1.3,this.size*.35);GX.closePath();GX.fill();GX.beginPath();GX.arc(this.size*.5,-this.size*.05,1.2,0,Math.PI*2);GX.fillStyle="#222";GX.fill();GX.restore();}
+}
+
+/* ── 小動物（うさぎ・リス）クラス ── */
+class Critter{
+  constructor(){this.reset(true);}
+  reset(init=false){this.type=Math.random()<.5?"rabbit":"squirrel";this.x=init?rnd(GW*.1,GW*.9):(Math.random()<.5?-20:GW+20);this.y=gLayout.ground||GH*.7;this.dir=this.x<GW/2?1:-1;this.vx=rnd(.15,.4)*this.dir;this.hopPhase=rnd(0,Math.PI*2);this.hopTimer=rnd(40,100);this.resting=init&&Math.random()<.6;this.restTimer=rnd(80,200);this.size=rnd(8,13);}
+  update(){if(this.resting){this.restTimer--;if(this.restTimer<=0){this.resting=false;this.vx=rnd(.15,.4)*this.dir;}return;}this.hopTimer--;this.x+=this.vx;this.hopPhase+=.12;if(this.hopTimer<=0){this.resting=true;this.restTimer=rnd(60,160);this.hopTimer=rnd(30,80);}if(this.x<-30||this.x>GW+30)this.reset();}
+  draw(){const hop=this.resting?0:Math.abs(Math.sin(this.hopPhase))*this.size*.6;GX.save();GX.translate(this.x,this.y-hop);if(this.dir<0)GX.scale(-1,1);if(this.type==="rabbit"){const s=this.size;GX.fillStyle="#D8CFC4";GX.beginPath();GX.ellipse(0,0,s*.7,s*.55,0,0,Math.PI*2);GX.fill();GX.beginPath();GX.arc(s*.5,-s*.4,s*.4,0,Math.PI*2);GX.fill();GX.fillStyle="#F5B8C8";GX.beginPath();GX.ellipse(s*.42,-s*.85,s*.12,s*.34,-.15,0,Math.PI*2);GX.fill();GX.beginPath();GX.ellipse(s*.65,-s*.8,s*.1,s*.3,.15,0,Math.PI*2);GX.fill();GX.fillStyle="#444";GX.beginPath();GX.arc(s*.65,-s*.42,1.5,0,Math.PI*2);GX.fill();}else{const s=this.size;GX.fillStyle="#B8904A";GX.beginPath();GX.ellipse(0,0,s*.65,s*.5,0,0,Math.PI*2);GX.fill();GX.beginPath();GX.arc(s*.48,-s*.38,s*.36,0,Math.PI*2);GX.fill();GX.fillStyle="#D4A870";GX.beginPath();GX.ellipse(s*.1,-s*.1,s*.3,s*.22,0,0,Math.PI*2);GX.fill();const tailX=-s*.7,tailY=-s*.3;GX.beginPath();for(let i=0;i<6;i++){const a=i/6*Math.PI*2,tx=tailX+Math.cos(a)*s*.45,ty=tailY+Math.sin(a)*s*.35;i===0?GX.moveTo(tx,ty):GX.lineTo(tx,ty);}GX.closePath();GX.fillStyle="#C89040";GX.fill();GX.fillStyle="#222";GX.beginPath();GX.arc(s*.62,-s*.42,1.5,0,Math.PI*2);GX.fill();}GX.restore();}
+}
+
+/* ── 鳥クラス ── */
+class Bird{
+  constructor(){this.reset(true);}
+  reset(init=false){this.x=init?rnd(GW*.1,GW*.9):(Math.random()<.5?-30:GW+30);this.y=rnd(GH*.05,GH*.35);this.vx=this.x<GW/2?rnd(.12,.28):rnd(-.12,-.28);this.vy=rnd(-.05,.05);this.phase=rnd(0,Math.PI*2);this.size=rnd(5,9);this.col=`hsl(${rndI(25,45)},40%,40%)`;this.flapSpeed=rnd(2.5,4);this.resting=init&&Math.random()<.55;this.restX=rnd(GW*.2,GW*.8);this.restY=(gLayout.ground||GH*.7)-rnd(30,60);this.restTimer=rnd(150,350);this.perchOff=rnd(-5,5);}
+  update(){if(this.resting){this.restTimer--;this.phase+=.03;if(this.restTimer<=0){this.resting=false;this.x=this.restX;this.y=this.restY;this.vx=rnd(.1,.25)*(Math.random()<.5?1:-1);this.vy=rnd(-.12,-.28);}return;}this.x+=this.vx;this.y+=this.vy+Math.sin(this.phase)*.12;this.phase+=.035;if(this.x<-40||this.x>GW+40||this.y<-20||this.y>GH+20)this.reset();}
+  draw(){if(this.resting){GX.save();GX.translate(this.restX,this.restY+this.perchOff);GX.fillStyle=this.col;GX.beginPath();GX.ellipse(0,0,this.size*.9,this.size*.55,0,0,Math.PI*2);GX.fill();GX.beginPath();GX.arc(this.size*.6,-this.size*.3,this.size*.42,0,Math.PI*2);GX.fill();GX.beginPath();GX.moveTo(this.size*.95,-this.size*.22);GX.lineTo(this.size*1.35,-this.size*.28);GX.lineTo(this.size*.95,-this.size*.35);GX.fillStyle="#E8A060";GX.fill();GX.beginPath();GX.arc(this.size*.78,-this.size*.38,1.2,0,Math.PI*2);GX.fillStyle="#222";GX.fill();const flap=Math.sin(this.phase*this.flapSpeed)*.15;GX.beginPath();GX.ellipse(-this.size*.1,-flap*this.size*.5,this.size*.85,this.size*(.3+flap*.1),flap*.2,0,Math.PI*2);GX.fillStyle=this.col;GX.globalAlpha=.7;GX.fill();GX.globalAlpha=1;GX.restore();return;}GX.save();GX.translate(this.x,this.y);if(this.vx<0)GX.scale(-1,1);const flap=Math.sin(this.phase*this.flapSpeed);GX.fillStyle=this.col;GX.beginPath();GX.ellipse(0,0,this.size*.9,this.size*.5,0,0,Math.PI*2);GX.fill();GX.beginPath();GX.arc(this.size*.7,-this.size*.25,this.size*.38,0,Math.PI*2);GX.fill();GX.beginPath();GX.moveTo(0,0);GX.bezierCurveTo(-this.size*.3,-this.size*(1+flap*.6),-this.size*.8,-this.size*(.5+flap*.4),-this.size*.2,this.size*.1);GX.fill();GX.beginPath();GX.moveTo(-this.size*.6,0);GX.lineTo(-this.size*1.3,this.size*.3);GX.lineTo(-this.size*.9,.1);GX.fill();GX.restore();}
+}
+
+/* ── 蝶クラス ── */
+class Butterfly{
+  constructor(){this.x=rnd(GW*.05,GW*.95);this.y=rnd(GH*.2,GH*.65);this.vx=rnd(-.5,.5);this.vy=rnd(-.3,.3);this.phase=rnd(0,Math.PI*2);this.col1=`hsl(${rndI(300,360)},70%,80%)`;this.col2=`hsl(${rndI(50,80)},70%,75%)`;this.size=rnd(5,9);this.t=0;}
+  update(){this.t++;this.x+=this.vx+Math.sin(this.t*.03)*.4;this.y+=this.vy+Math.cos(this.t*.04)*.3;if(this.t%120===0){this.vx=rnd(-.6,.6);this.vy=rnd(-.4,.4);}if(this.x<5||this.x>GW-5)this.vx*=-1;if(this.y<5||this.y>GH*.75)this.vy*=-1;this.phase+=.18;}
+  draw(){const flap=Math.abs(Math.sin(this.phase)),wx=this.size*(1+flap*.5);GX.save();GX.translate(this.x,this.y);[[1,-.3,this.col1],[1,.3,this.col2],[-1,-.3,this.col1],[-1,.3,this.col2]].forEach(([sx,sy,col])=>{GX.save();GX.scale(sx*flap,1);GX.beginPath();GX.ellipse(wx*.6,sy*this.size*.8,wx*.7,this.size*.55,-sy*.4,0,Math.PI*2);GX.fillStyle=col;GX.globalAlpha=.82;GX.fill();GX.globalAlpha=1;GX.restore();});GX.beginPath();GX.ellipse(0,0,2,this.size*.9,0,0,Math.PI*2);GX.fillStyle="#555";GX.fill();GX.restore();}
+}
+
+/* ── 猫クラス ── */
+class Cat{
+  constructor(){this.reset(true);}
+  reset(init=false){
+    this.x=init?rnd(GW*.1,GW*.9):(Math.random()<.5?-30:GW+30);
+    this.y=(gLayout.ground||GH*.7);
+    this.dir=this.x<GW/2?1:-1;
+    this.vx=rnd(.1,.3)*this.dir;
+    this.s=rnd(7,11); // サイズ
+    this.phase=rnd(0,Math.PI*2);
+    this.col=`hsl(${rndI(20,50)},${rndI(15,45)}%,${rndI(50,75)}%)`;
+    this.state="walk"; // walk | sit | groom
+    this.stateTimer=rndI(80,180);
+    this.tailPhase=rnd(0,Math.PI*2);
+  }
+  update(){
+    this.phase+=.08; this.tailPhase+=.06;
+    this.stateTimer--;
+    if(this.stateTimer<=0){
+      const r=Math.random();
+      this.state=r<.45?"walk":r<.75?"sit":"groom";
+      this.stateTimer=rndI(60,200);
+      if(this.state==="walk") this.vx=rnd(.1,.3)*this.dir;
+    }
+    if(this.state==="walk"){
+      this.x+=this.vx;
+      if(this.x<-40||this.x>GW+40) this.reset();
+    }
+  }
+  draw(){
+    const s=this.s, isSit=(this.state==="sit"||this.state==="groom");
+    const legOff=isSit?0:Math.sin(this.phase)*s*.35;
+    GX.save(); GX.translate(this.x, this.y);
+    if(this.dir<0) GX.scale(-1,1);
+    GX.fillStyle=this.col;
+    /* 胴 */
+    if(isSit){
+      GX.beginPath(); GX.ellipse(0,-s*.3,s*.55,s*.7,0,0,Math.PI*2); GX.fill();
+    } else {
+      GX.beginPath(); GX.ellipse(0,-s*.35,s*.8,s*.38,-.1,0,Math.PI*2); GX.fill();
+    }
+    /* 頭 */
+    GX.beginPath(); GX.arc(isSit?s*.22:-s*.55+legOff*.1,-s*(isSit?.9:.62),s*.38,0,Math.PI*2); GX.fill();
+    /* 耳 */
+    const hx=isSit?s*.22:-s*.55, hy=-s*(isSit?.9:.62);
+    [[-.18,-.42],[.14,-.42]].forEach(([ex,ey])=>{
+      GX.beginPath(); GX.moveTo(hx+ex*s,hy+ey*s); GX.lineTo(hx+(ex-.1)*s,hy+(ey-.28)*s); GX.lineTo(hx+(ex+.1)*s,hy+(ey-.28)*s); GX.closePath(); GX.fill();
+    });
+    /* 目 */
+    GX.fillStyle="#2A1A0A";
+    GX.beginPath(); GX.arc(hx-s*.08,hy-s*.05,1.4,0,Math.PI*2); GX.fill();
+    GX.beginPath(); GX.arc(hx+s*.12,hy-s*.05,1.4,0,Math.PI*2); GX.fill();
+    /* 脚（歩行時） */
+    if(!isSit){
+      GX.fillStyle=this.col;
+      [[-s*.4,0],[s*.1,0],[-s*.15,0],[s*.35,0]].forEach(([lx],li)=>{
+        const lphase=li%2===0?legOff:-legOff;
+        GX.beginPath(); GX.ellipse(lx,lphase*1.1,s*.14,s*.28,.05,0,Math.PI*2); GX.fill();
+      });
+    }
+    /* しっぽ */
+    GX.beginPath();
+    const tx=isSit?-s*.45:s*.7, ty=isSit?-s*.1:s*.0;
+    const tCurl=Math.sin(this.tailPhase)*s*.3;
+    GX.moveTo(tx,ty);
+    GX.bezierCurveTo(tx+s*(isSit?-.6:.4),ty-s*.5+tCurl,tx+s*(isSit?-.3:.7),ty-s*.9+tCurl,tx+s*(isSit?-.1:.5),ty-s*1.1+tCurl);
+    GX.strokeStyle=this.col; GX.lineWidth=s*.22; GX.lineCap="round"; GX.stroke();
+    /* グルーミング中：前足を顔に */
+    if(this.state==="groom"){
+      GX.fillStyle=this.col;
+      GX.beginPath(); GX.ellipse(hx+s*.25,hy+s*.12,s*.15,s*.28,-.6,0,Math.PI*2); GX.fill();
+    }
+    GX.restore();
+  }
+}
+
+/* ── 犬クラス ── */
+class Dog{
+  constructor(){this.reset(true);}
+  reset(init=false){
+    this.x=init?rnd(GW*.1,GW*.9):(Math.random()<.5?-40:GW+40);
+    this.y=(gLayout.ground||GH*.7);
+    this.dir=this.x<GW/2?1:-1;
+    this.vx=rnd(.25,.6)*this.dir;
+    this.s=rnd(9,14);
+    this.phase=rnd(0,Math.PI*2);
+    this.col=`hsl(${rndI(25,45)},${rndI(30,55)}%,${rndI(45,65)}%)`;
+    this.state="run";
+    this.stateTimer=rndI(60,140);
+    this.tailPhase=rnd(0,Math.PI*2);
+    this.earPhase=rnd(0,Math.PI*2);
+  }
+  update(){
+    this.phase+=.12; this.tailPhase+=.15; this.earPhase+=.04;
+    this.stateTimer--;
+    if(this.stateTimer<=0){
+      this.state=Math.random()<.3?"sniff":"run";
+      this.stateTimer=rndI(50,160);
+      if(this.state==="run") this.vx=rnd(.25,.6)*this.dir;
+    }
+    if(this.state==="run"){
+      this.x+=this.vx;
+      if(this.x<-50||this.x>GW+50) this.reset();
+    }
+  }
+  draw(){
+    const s=this.s, isSniff=this.state==="sniff";
+    const legOff=isSniff?0:Math.sin(this.phase)*s*.4;
+    const bodyTilt=isSniff?.15:0;
+    GX.save(); GX.translate(this.x,this.y);
+    if(this.dir<0) GX.scale(-1,1);
+    GX.fillStyle=this.col;
+    /* 胴 */
+    GX.beginPath(); GX.ellipse(0,-s*.3,s*.9,s*.38,bodyTilt,0,Math.PI*2); GX.fill();
+    /* 頭 */
+    const headX=isSniff?s*.7:s*.7, headY=isSniff?-s*.8:-s*.62;
+    GX.beginPath(); GX.arc(headX,headY,s*.4,0,Math.PI*2); GX.fill();
+    /* 鼻先 */
+    GX.beginPath(); GX.ellipse(headX+s*.32,headY+s*.1,s*.2,s*.15,.1,0,Math.PI*2); GX.fill();
+    GX.beginPath(); GX.arc(headX+s*.42,headY+s*.12,s*.08,0,Math.PI*2); GX.fillStyle="#2A1A0A"; GX.fill();
+    /* 目 */
+    GX.beginPath(); GX.arc(headX+s*.12,headY-s*.1,1.5,0,Math.PI*2); GX.fill();
+    /* 耳（垂れ耳） */
+    const earSwing=Math.sin(this.earPhase)*s*.06;
+    GX.fillStyle=this.col;
+    GX.beginPath(); GX.ellipse(headX-s*.08,headY+earSwing,s*.14,s*.32,.2,0,Math.PI*2); GX.fill();
+    GX.beginPath(); GX.ellipse(headX+s*.18,headY+earSwing*.8,s*.12,s*.28,-.2,0,Math.PI*2); GX.fill();
+    /* 脚 */
+    GX.fillStyle=this.col;
+    [[-s*.55,0],[-s*.2,0],[s*.15,0],[s*.5,0]].forEach(([lx],li)=>{
+      const lp=li%2===0?legOff:-legOff;
+      GX.beginPath(); GX.ellipse(lx,lp*.9,s*.13,s*.3,0,0,Math.PI*2); GX.fill();
+    });
+    /* しっぽ（上に元気よく） */
+    const tw=Math.sin(this.tailPhase)*s*.5;
+    GX.beginPath();
+    GX.moveTo(-s*.8,-s*.15);
+    GX.bezierCurveTo(-s*1.1,-s*.6+tw,-s*1.3,-s*.8+tw,-s*1.1,-s*1.0+tw);
+    GX.strokeStyle=this.col; GX.lineWidth=s*.2; GX.lineCap="round"; GX.stroke();
+    GX.restore();
+  }
+}
+
+/* ── 雨システム ── */
+let gRain={active:false,intensity:0,drops:[],timer:0,nextRain:rnd(600,1800),puddles:[],fadeOut:false,fadeAlpha:1};
+function initRainDrops(){
+  gRain.drops=[];
+  const n=Math.floor(60+gRain.intensity*80);
+  for(let i=0;i<n;i++) gRain.drops.push({x:rnd(0,GW),y:rnd(-GH,GH),len:rnd(6,14),spd:rnd(4,8),wx:rnd(-.5,.5)});
+  gRain.puddles=[];
+  for(let i=0;i<5;i++) gRain.puddles.push({x:rnd(GW*.05,GW*.95),y:(gLayout.ground||GH*.7)+rnd(2,8),r:0,maxR:rnd(6,14),phase:rnd(0,Math.PI*2)});
+}
+function updateRain(){
+  gRain.timer--;
+  if(!gRain.active&&!gRain.fadeOut&&gRain.timer<=0){
+    /* 季節ごとの降雨確率 */
+    const prob={spring:.55,summer:.45,autumn:.65,winter:.3}[gSeason]||.4;
+    if(Math.random()<prob){
+      gRain.active=true; gRain.fadeOut=false; gRain.fadeAlpha=1;
+      gRain.intensity=rnd(.4,.9);
+      /* 降雨時間：1200〜3600フレーム（約40秒〜2分） */
+      gRain.timer=rnd(1200,3600);
+      initRainDrops();
+    } else {
+      /* 晴れ間：1800〜4000フレーム（約1〜2.2分） */
+      gRain.timer=rnd(1800,4000);
+    }
+  } else if(gRain.active&&gRain.timer<=0){
+    /* 雨が終わる → フェードアウト開始 */
+    gRain.active=false; gRain.fadeOut=true; gRain.fadeAlpha=1;
+    gRain.timer=rnd(1800,4000);
+  } else if(gRain.fadeOut){
+    /* フェードアウト：180フレームかけてじんわり止む */
+    gRain.fadeAlpha=Math.max(0,gRain.fadeAlpha-0.006);
+    if(gRain.fadeAlpha<=0) gRain.fadeOut=false;
+  }
+}
+function drawRain(w,h,ground){
+  if(!gRain.active&&!gRain.fadeOut) return;
+  const fade=gRain.active?1:gRain.fadeAlpha;
+  const a=Math.min(.7,gRain.intensity*.75)*fade;
+  GX.strokeStyle=`rgba(180,210,235,${a})`;
+  GX.lineWidth=.9;
+  gRain.drops.forEach(d=>{
+    d.y+=d.spd*fade; d.x+=d.wx*fade;
+    if(d.y>h+10){d.y=-rnd(5,30);d.x=rnd(0,w);}
+    GX.beginPath(); GX.moveTo(d.x,d.y); GX.lineTo(d.x+d.wx*4,d.y-d.len); GX.stroke();
+  });
+  /* 水たまりの波紋 */
+  gRain.puddles.forEach(p=>{
+    p.phase+=.06; p.r=Math.min(p.maxR,p.r+.04*fade);
+    const pr=p.r*(0.5+0.5*Math.abs(Math.sin(p.phase)));
+    GX.beginPath(); GX.ellipse(p.x,p.y,pr,pr*.35,0,0,Math.PI*2);
+    GX.strokeStyle=`rgba(168,216,234,${a*.5})`; GX.lineWidth=.8; GX.stroke();
+  });
+  /* 空を少し暗く */
+  GX.fillStyle=`rgba(100,120,150,${gRain.intensity*.15*fade})`;
+  GX.fillRect(0,0,w,ground);
+}
+
+/* ── メイン描画ループ ── */
+function drawGarden(ts){
+  const t=ts/1000;
+  if(!gLayout.w){gAF=requestAnimationFrame(drawGarden);return;}
+  const{w,h,ground,trees,shrubs,grassTufts,sprouts,flowers,stars,snowflakes,rainbowX,rainbowY,riverY}=gLayout;
+  const tb=state.totalBingos;
+  const pal=SEASON_PAL[gSeason];
+  const isNight=tb>=9&&gSeason!=="winter";
+  const isWinter=gSeason==="winter";
+  const isAutumn=gSeason==="autumn";
+  const isSummer=gSeason==="summer";
+  const isSpring=gSeason==="spring";
+  const isRaining=gRain.active||gRain.fadeOut;
+
+  /* 空 */
+  const sg=GX.createLinearGradient(0,0,0,ground);
+  if(isNight){sg.addColorStop(0,"#1A1A2E");sg.addColorStop(1,"#2C3E50");}
+  else if(isWinter){sg.addColorStop(0,"#E0E8F4");sg.addColorStop(1,"#C8D8E8");}
+  else if(isAutumn){sg.addColorStop(0,"#F0D8B0");sg.addColorStop(1,"#E4C890");}
+  else if(isSummer){sg.addColorStop(0,"#B8E0F8");sg.addColorStop(1,"#A0D0B0");}
+  else{sg.addColorStop(0,"#EEF6FF");sg.addColorStop(1,"#D6EAD9");}
+  GX.fillStyle=sg; GX.fillRect(0,0,w,h);
+
+  /* 星（夜空ステージ or 冬の夜っぽい） */
+  if(isNight||isWinter){
+    const sa=isNight?1:.5;
+    stars.forEach(s=>{const tw=.4+.6*Math.sin(t*2+s.tp);GX.beginPath();GX.arc(s.x,s.y,s.r,0,Math.PI*2);GX.fillStyle=`rgba(255,249,220,${tw*sa})`;GX.fill();});
+  }
+
+  /* 月（夜・冬） */
+  if(isNight){
+    drawMoon(w*.8,h*.14,h*.07,"#1A1A2E",0.92);
+  }
+  if(isWinter&&tb>=1){
+    drawMoon(w*.75,h*.13,h*.055,"#E0E8F4",0.7);
+  }
+
+  /* 太陽（昼） */
+  if(!isNight){
+    const sx=isWinter?w*.72:w*.8, sy=h*.14;
+    const sp=1+Math.sin(t*.5)*.02;
+    GX.save();GX.translate(sx,sy);
+    for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2+t*.25;GX.beginPath();GX.moveTo(Math.cos(a)*h*.055,Math.sin(a)*h*.055);GX.lineTo(Math.cos(a)*h*.085,Math.sin(a)*h*.085);GX.strokeStyle=isWinter?"rgba(220,210,190,.4)":"rgba(255,230,120,.55)";GX.lineWidth=2;GX.stroke();}
+    GX.beginPath();GX.arc(0,0,h*.052*sp,0,Math.PI*2);GX.fillStyle=pal.sunCol;GX.fill();
+    GX.restore();
+  }
+
+  /* 虹（ステージ14〜、春夏秋） */
+  if(tb>=14&&!isWinter&&!isNight){
+    const ra=Math.min(1,(tb-14)/3)*.7;
+    const rainbowPulse=.7+.3*Math.sin(t*.3);
+    const rcols=["rgba(255,100,100,","rgba(255,180,60,","rgba(255,240,60,","rgba(100,200,80,","rgba(60,160,220,","rgba(120,80,200,"];
+    rcols.forEach((c,i)=>{
+      GX.beginPath();
+      GX.arc(w*.5,ground+h*.04,w*(.38+i*.04),Math.PI,0);
+      GX.strokeStyle=c+(ra*rainbowPulse)+")";GX.lineWidth=3.5;GX.stroke();
+    });
+  }
+
+  /* 霧（秋・冬） */
+  if(pal.fogCol){
+    GX.fillStyle=pal.fogCol;GX.fillRect(0,ground*.5,w,ground*.5);
+  }
+
+  /* 地面 */
+  GX.fillStyle=isWinter?"#D0CABC":pal.ground;
+  GX.fillRect(0,ground,w,h-ground);
+  const gg=GX.createLinearGradient(0,ground,0,ground+h*.07);
+  gg.addColorStop(0,isWinter?"#B8C4B8":pal.grassA);gg.addColorStop(1,isWinter?"#D0CABC":pal.ground);
+  GX.fillStyle=gg;GX.fillRect(0,ground-2,w,h*.08);
+
+  /* 小川（ステージ8〜） */
+  if(tb>=8){
+    const rp=Math.min(1,(tb-8)/2);
+    GX.beginPath();
+    GX.moveTo(0,riverY-h*.02);GX.bezierCurveTo(w*.3,riverY-h*.01,w*.6,riverY+h*.012,w,riverY-h*.015);
+    GX.lineTo(w,riverY+h*.042);GX.bezierCurveTo(w*.6,riverY+h*.058,w*.3,riverY+h*.04,0,riverY+h*.05);
+    GX.closePath();
+    const wg=GX.createLinearGradient(0,riverY,0,riverY+h*.04);
+    wg.addColorStop(0,pal.waterA);wg.addColorStop(1,pal.waterB);
+    GX.fillStyle=wg;GX.globalAlpha=rp*.88;GX.fill();GX.globalAlpha=1;
+    /* 川の波 */
+    for(let i=0;i<3;i++){const wx=((t*.22+i*.33)*w)%w;const wy=riverY+h*.018+Math.sin(t*2+i)*h*.007;GX.beginPath();GX.ellipse(wx,wy,w*.04,h*.005,0,0,Math.PI*2);GX.strokeStyle=`rgba(168,216,234,${rp*.4})`;GX.lineWidth=1;GX.stroke();}
+  }
+
+  /* 芝生（ステージ1〜） */
+  if(tb>=1){
+    const gp=Math.min(1,(tb-1)/3);
+    GX.globalAlpha=gp*(isWinter?.55:1);
+    grassTufts.forEach(g=>drawGrass(g.x,g.y,g.h,t,g.off,pal));
+    GX.globalAlpha=1;
+  }
+
+  /* 芽（ステージ1〜） */
+  if(tb>=1){
+    const sp=Math.min(1,(tb-1)/2);
+    GX.globalAlpha=sp*(isWinter?.4:1);
+    sprouts.forEach(s=>drawSprout(s.x,s.y,t,s.off,pal));
+    GX.globalAlpha=1;
+  }
+
+  /* 野の花（ステージ2〜、冬は薄く） */
+  if(tb>=2){
+    const fp=Math.min(1,(tb-2)/3)*(isWinter?.3:1);
+    GX.globalAlpha=fp;
+    flowers.forEach(f=>drawWildFlower(f.x,f.y,f.h,pal.flowerCols[f.colIdx],t,f.off));
+    GX.globalAlpha=1;
+  }
+
+  /* 低木（ステージ3〜） */
+  if(tb>=3){
+    const shrp=Math.min(1,(tb-3)/3);
+    GX.globalAlpha=shrp;
+    shrubs.forEach(s=>drawShrub(s.x,s.y,s.r,t,pal,s.swayOff));
+    GX.globalAlpha=1;
+  }
+
+  /* 木（ステージ6〜） */
+  if(tb>=6){
+    const tp=Math.min(1,(tb-6)/3);
+    GX.globalAlpha=tp;
+    trees.forEach(tr=>drawTree(tr.x,tr.y,tr.size,t,pal,tr.swayOff,tb));
+    GX.globalAlpha=1;
+    /* 花びら・落ち葉（春・秋） */
+    if((isSpring||isAutumn)&&Math.random()<.05){
+      gParticles.push({x:rnd(0,w),y:ground-rnd(20,70),vx:rnd(-.4,.4),vy:rnd(.3,.9),rot:rnd(0,Math.PI*2),rotV:rnd(-.06,.06),col:isSpring?pal.petalCol:pal.petalCol,life:rnd(60,200),isPetal:true});
+    }
+  }
+
+  /* 花びら・落ち葉パーティクル */
+  gParticles=gParticles.filter(p=>{
+    if(!p.isPetal) return true;
+    p.x+=p.vx+Math.sin(t*2+p.x*.01)*.35;p.y+=p.vy;p.rot+=p.rotV;p.life--;
+    if(p.life<=0) return false;
+    const a=Math.min(1,p.life/30);
+    GX.save();GX.translate(p.x,p.y);GX.rotate(p.rot);
+    GX.beginPath();GX.ellipse(0,0,4,2.5,0,0,Math.PI*2);
+    GX.fillStyle=p.col;GX.globalAlpha=a*.75;GX.fill();GX.globalAlpha=1;
+    GX.restore(); return true;
+  });
+
+  /* 雪（冬、tb>=1で量増加） */
+  if(isWinter&&tb>=1){
+    const sa=Math.min(1,tb*.18);
+    snowflakes.forEach(s=>{
+      s.y+=s.vy;s.x+=s.vx+Math.sin(t*.8+s.off)*.4;
+      if(s.y>h+5){s.y=-5;s.x=rnd(0,w);}
+      GX.beginPath();GX.arc(s.x,s.y,s.r,0,Math.PI*2);
+      GX.fillStyle=`rgba(240,248,255,${sa*.7})`;GX.fill();
+    });
+  }
+
+  /* 雨（ランダム発生） */
+  updateRain();
+  drawRain(w,h,ground);
+
+  /* 蛍（ステージ10〜、夏は多く、冬はなし、雨中は減る） */
+  if(tb>=10&&!isWinter&&!isRaining){
+    const fp=Math.min(1,(tb-10)/2);
+    GX.globalAlpha=fp*(isSummer?1:.6);
+    gFireflies.forEach(f=>{f.update();f.draw(t);});
+    GX.globalAlpha=1;
+  }
+
+  /* 鳥（ステージ4〜、雨中は少なく） */
+  if(tb>=4){
+    const brp=Math.min(1,(tb-4)/3);
+    const birdAlpha=(isWinter?.5:1)*(isRaining?.35:1);
+    GX.globalAlpha=brp*birdAlpha;
+    gBirds.forEach(b=>{b.update();b.draw();});
+    GX.globalAlpha=1;
+  }
+
+  /* 蝶（ステージ6〜、冬・雨中はなし） */
+  if(tb>=6&&!isWinter&&!isRaining){
+    const bfp=Math.min(1,(tb-6)/3);
+    GX.globalAlpha=bfp;
+    gButterflies.forEach(b=>{b.update();b.draw();});
+    GX.globalAlpha=1;
+  }
+
+  /* 魚（ステージ12〜） */
+  if(tb>=12){
+    const fishp=Math.min(1,(tb-12)/2);
+    GX.globalAlpha=fishp;
+    gFish.forEach(f=>{f.update();f.draw();});
+    GX.globalAlpha=1;
+  }
+
+  /* 猫（ステージ12〜） */
+  if(tb>=12){
+    const catp=Math.min(1,(tb-12)/2);
+    GX.globalAlpha=catp*(isRaining?.3:1);
+    gCats.forEach(c=>{c.update();c.draw();});
+    GX.globalAlpha=1;
+  }
+
+  /* 犬（ステージ14〜） */
+  if(tb>=14){
+    const dogp=Math.min(1,(tb-14)/2);
+    GX.globalAlpha=dogp*(isRaining?.4:1);
+    gDogs.forEach(d=>{d.update();d.draw();});
+    GX.globalAlpha=1;
+  }
+
+  /* 小動物（ステージ16〜、雨中は引っ込む） */
+  if(tb>=16&&!isRaining){
+    const crp=Math.min(1,(tb-16)/2);
+    GX.globalAlpha=crp;
+    gCritters.forEach(c=>{c.update();c.draw();});
+    GX.globalAlpha=1;
+  }
+
+  /* 光のオーバーレイ */
+  if(!isNight&&!isWinter&&!isRaining){
+    const lx=w*.35+Math.sin(t*.4)*w*.08;
+    const lg=GX.createRadialGradient(lx,ground*.45,0,lx,ground*.45,w*.55);
+    lg.addColorStop(0,"rgba(255,250,215,.07)");lg.addColorStop(1,"rgba(255,250,215,0)");
+    GX.fillStyle=lg;GX.fillRect(0,0,w,h);
+  }
+
+  gAF=requestAnimationFrame(drawGarden);
+}
+
+function initCreatures(){
+  const d=density();
+  const birdCount=Math.min(8,Math.floor(2+d*.8));
+  const bfCount=Math.min(3,Math.floor(1+d*.3));   /* 蝶：最大3匹 */
+  const ffCount=Math.min(15,Math.floor(3+d*2));
+  const fishCount=Math.min(8,Math.floor(2+d*.8));
+  const critterCount=Math.min(4,Math.floor(1+d*.4));
+  const catCount=Math.min(3,Math.floor(1+d*.25));
+  const dogCount=Math.min(2,Math.floor(1+d*.18));
+  gBirds=Array.from({length:birdCount},()=>new Bird());
+  gButterflies=Array.from({length:bfCount},()=>new Butterfly());
+  gFireflies=Array.from({length:ffCount},()=>new Firefly());
+  gFish=Array.from({length:fishCount},()=>new Fish());
+  gCritters=Array.from({length:critterCount},()=>new Critter());
+  gCats=Array.from({length:catCount},()=>new Cat());
+  gDogs=Array.from({length:dogCount},()=>new Dog());
+}
+
+function startGarden(){
+  gSeason=getSeason();
+  computeLayout();
+  initCreatures();
+  if(gAF) cancelAnimationFrame(gAF);
+  gAF=requestAnimationFrame(drawGarden);
+}
+
+function updateGardenBadge(){
+  document.getElementById("garden-badge").textContent=getStageName(state.totalBingos);
+  document.getElementById("garden-season").textContent=SEASON_LABEL[gSeason];
+}
+
+window.addEventListener("resize",()=>{
+  computeLayout(); initCreatures();
+});
+
+/* ═══════════════════════════════════════
+   BINGO LOGIC
+═══════════════════════════════════════ */
+function getBingoLines(){return LINES.filter(line=>line.every(i=>state.checked[i]));}
+function renderGrid(flashIndices){
+  const bLines=getBingoLines(),onLines=new Set(bLines.flat()),flashSet=new Set(flashIndices||[]);
+  document.querySelectorAll(".bingo-cell").forEach((el,i)=>{
+    const inBingo=onLines.has(i);
+    el.classList.toggle("checked",state.checked[i]&&!inBingo);
+    el.classList.toggle("bingo-line",inBingo);
+    if(flashSet.has(i)){el.classList.remove("bingo-flash");void el.offsetWidth;el.classList.add("bingo-flash");el.addEventListener("animationend",()=>el.classList.remove("bingo-flash"),{once:true});}
+  });
+}
+function renderStats(){
+  const n=state.checked.filter((v,i)=>v&&!CELLS[i].free).length;
+  document.getElementById("stat-checked").textContent=n;
+  document.getElementById("stat-bingo-today").textContent=state.todayBingos;
+  document.getElementById("stat-bingo-total").textContent=state.totalBingos;
+}
+function renderMessage(){
+  const n=state.checked.filter((v,i)=>v&&!CELLS[i].free).length,el=document.getElementById("msg-text");
+  if(n===0) el.textContent="おかえりなさい。今日も、小さな余白をひとつ見つけてみましょう。";
+  else if(n===1) el.textContent="ひとつ見つけられたら、それで十分です。";
+  else el.textContent=n+"つの余白が育っています。";
+}
+function renderType(){
+  const total=Object.values(state.catCounts).reduce((a,b)=>a+b,0);
+  const n=document.getElementById("type-name"),d=document.getElementById("type-desc");
+  if(total<10){n.textContent="—";d.textContent="余白タイプは、もう少し遊ぶと見えてきます。";return;}
+  const cats=Object.entries(state.catCounts).filter(([c])=>c!=="free").sort((a,b)=>b[1]-a[1]);
+  if(!cats.length) return;
+  const info=TYPE_MAP[cats[0][0]];if(!info) return;
+  n.textContent=info.name;d.textContent="最近の余白を見ると、あなたは"+info.desc;
+}
+function renderAll(flashIndices){
+  renderGrid(flashIndices);renderStats();renderMessage();renderType();updateGardenBadge();
+}
+
+function buildGrid(){
+  const grid=document.getElementById("bingo-grid");grid.innerHTML="";
+  CELLS.forEach((cell,i)=>{
+    const el=document.createElement("div");
+    el.className="bingo-cell"+(cell.free?" free":"");
+    if(cell.free){el.innerHTML=`<span class="cell-text"><span class="free-label">FREE</span>今日の余白</span>`;}
+    else{el.innerHTML=`<span class="cell-text">${cell.text.replace(/\n/g,"<br>")}</span><span class="cell-check">✓</span>`;el.addEventListener("click",()=>onCellClick(i));}
+    grid.appendChild(el);
+  });
+}
+
+function onCellClick(i){
+  if(CELLS[i].free) return;
+  const was=state.checked[i];state.checked[i]=!was;
+  const cat=CELLS[i].cat;
+  if(!was) state.catCounts[cat]=(state.catCounts[cat]||0)+1;
+  else state.catCounts[cat]=Math.max(0,(state.catCounts[cat]||1)-1);
+  const newBingo=getBingoLines().length;
+  let flashLines=[];
+  if(newBingo>state.todayBingos&&!was){
+    const diff=newBingo-state.todayBingos;
+    state.todayBingos+=diff;state.totalBingos+=diff;
+    flashLines=getBingoLines().flat();
+    showBingoToast(flashLines);
+    /* 庭を更新（密度・生き物数が変わる） */
+    computeLayout();initCreatures();
+  } else if(!was){
+    const el=document.querySelectorAll(".bingo-cell")[i];
+    el.classList.add("pop-anim");el.addEventListener("animationend",()=>el.classList.remove("pop-anim"),{once:true});
+  }
+  saveState();renderAll(flashLines.length?flashLines:null);
+}
+
+/* ═══════════════════════════════════════
+   CONFETTI
+═══════════════════════════════════════ */
+const CC=document.getElementById("confetti-canvas"),CX=CC.getContext("2d");
+let cPieces=[],cAF=null;
+const CCOLS=["#7EAE8F","#E8B4C0","#F5D680","#A8D8EA","#F9A8D4","#C7E9B0","#FFD6A5"];
+function spawnConfetti(n){
+  CC.width=window.innerWidth;CC.height=window.innerHeight;cPieces=[];
+  for(let k=0;k<n;k++){const a=Math.random()*Math.PI*2,sp=2+Math.random()*5;cPieces.push({x:CC.width*(.2+Math.random()*.6),y:CC.height*.4,vx:Math.cos(a)*sp,vy:-(4+Math.random()*8),rot:Math.random()*360,rotV:(Math.random()-.5)*10,size:7+Math.random()*9,color:CCOLS[Math.floor(Math.random()*CCOLS.length)],shape:["circle","rect","star"][Math.floor(Math.random()*3)],alpha:1,gravity:.18+Math.random()*.12});}
+  if(cAF) cancelAnimationFrame(cAF);tickConfetti();
+}
+function tickConfetti(){
+  CX.clearRect(0,0,CC.width,CC.height);let alive=false;
+  cPieces.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=p.gravity;p.vx*=.99;p.rot+=p.rotV;if(p.y>CC.height+20){p.alpha=0;return;}if(p.y>CC.height*.6)p.alpha=Math.max(0,p.alpha-.018);if(p.alpha<=0)return;alive=true;CX.globalAlpha=p.alpha;CX.fillStyle=p.color;if(p.shape==="circle"){CX.beginPath();CX.arc(p.x,p.y,p.size/2,0,Math.PI*2);CX.fill();}else if(p.shape==="rect"){CX.save();CX.translate(p.x,p.y);CX.rotate(p.rot*Math.PI/180);CX.fillRect(-p.size/2,-p.size/4,p.size,p.size/2);CX.restore();}else{CX.save();CX.translate(p.x,p.y);CX.rotate(p.rot*Math.PI/180);CX.beginPath();for(let k=0;k<5;k++){const a=(k*72-90)*Math.PI/180,b=(k*72-54)*Math.PI/180;if(k===0)CX.moveTo(Math.cos(a)*p.size/2,Math.sin(a)*p.size/2);else CX.lineTo(Math.cos(a)*p.size/2,Math.sin(a)*p.size/2);CX.lineTo(Math.cos(b)*p.size*.22,Math.sin(b)*p.size*.22);}CX.closePath();CX.fill();CX.restore();}CX.globalAlpha=1;});
+  if(alive)cAF=requestAnimationFrame(tickConfetti);else{CX.clearRect(0,0,CC.width,CC.height);cAF=null;}
+}
+
+/* ═══════════════════════════════════════
+   BINGO TOAST
+═══════════════════════════════════════ */
+const TOAST_FLOWER_SETS={spring:[["🌸","🌼","🌷"],["🌺","🌸","🌼"]],summer:[["🌿","🍀","🌱"],["🌻","🌿","✨"]],autumn:[["🍂","🍁","🌾"],["🌰","🍂","🌿"]],winter:[["❄️","⛄","✨"],["🌨","❄️","🌟"]]};
+function showBingoToast(){
+  document.getElementById("toast-msg").textContent=MESSAGES[Math.floor(Math.random()*MESSAGES.length)];
+  const sets=TOAST_FLOWER_SETS[gSeason];
+  document.getElementById("toast-flowers").textContent=sets[Math.floor(Math.random()*sets.length)].join(" ");
+  const ring=document.getElementById("toast-ring");ring.innerHTML="";
+  const parts={spring:["🌸","✨","🌿","💫","🌼","⭐","🌷","🍀"],summer:["🌿","✨","🌻","💫","🌊","⭐","🦋","🍀"],autumn:["🍂","✨","🍁","💫","🌾","⭐","🌰","🍄"],winter:["❄️","✨","⛄","💫","🌨","⭐","🌟","🤍"]}[gSeason];
+  parts.forEach((p,k)=>{const a=(k/8)*Math.PI*2,dist=55+Math.random()*20;const el=document.createElement("span");el.className="ring-particle";el.textContent=p;el.style.cssText=`--tx:${Math.round(Math.cos(a)*dist)}px;--ty:${Math.round(Math.sin(a)*dist)}px;--rot:${Math.round((Math.random()-.5)*40)}deg;animation-delay:${(k*.06).toFixed(2)}s`;ring.appendChild(el);});
+  setTimeout(()=>spawnConfetti(120),200);
+  document.getElementById("bingo-toast").classList.add("show");
+}
+function closeToast(){document.getElementById("bingo-toast").classList.remove("show");}
+
+/* ═══════════════════════════════════════
+   RESET
+═══════════════════════════════════════ */
+function resetToday(){state.checked=CELLS.map(c=>!!c.free);state.todayBingos=0;saveState();renderAll();}
+function resetAll(){
+  if(!confirm("すべての記録をリセットします。\nよろしいですか？")) return;
+  state={checked:CELLS.map(c=>!!c.free),todayBingos:0,totalBingos:0,catCounts:{}};
+  [K_CHECKED,K_BINGO_TODAY,K_BINGO_TOTAL,K_CAT_COUNTS,K_SAVE_DATE,K_DAILY_SEED].forEach(k=>localStorage.removeItem(k));
+  computeLayout();initCreatures();renderAll();
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+function startGame(){
+  document.getElementById("screen-top").classList.remove("active");
+  document.getElementById("screen-game").classList.add("active");
+  startGarden();
+}
+function init(){
+  const d=new Date();
+  document.getElementById("today-date").textContent=(d.getMonth()+1)+"月"+d.getDate()+"日";
+  state=loadState();
+  buildGrid();
+  renderAll();
+  if(localStorage.getItem(K_SAVE_DATE)) startGame();
+}
+init();
+
+/* ═══════════════════════════════════════
+   感想フォーム
+═══════════════════════════════════════ */
+
+/* ★ GASデプロイURLをここに貼る ★ */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwGJjAZ4edeibG4G6lfcLehjp8XHJbs7y4y-CJl47OhOlrjhd9Afk0Nuy2PeQsunm62mQ/exec";
+
+/* フォーム状態 */
+let fbData = { change:5, action:"", stars:0, continueVal:"", comment:"" };
+
+const SLIDER_LABELS = [
+  "まったくない","ほとんどない","少しある","少しある","ある程度ある",
+  "ある程度ある","かなりある","かなりある","とてもある","とてもある","とてもある"
+];
+const STAR_LABELS = ["","あまり…","もう少し","よかった","とてもよかった","すごくよかった！"];
+
+function openFeedback(){
+  /* フォームを初期化 */
+  fbData={change:5,action:"",stars:0,continueVal:"",comment:""};
+  document.getElementById("fb-change").value=5;
+  updateSlider(5);
+  document.querySelectorAll(".fb-choice,.fb-yn-btn").forEach(el=>el.classList.remove("selected"));
+  document.querySelectorAll(".fb-star").forEach(el=>el.classList.remove("lit"));
+  document.getElementById("fb-star-label").textContent="タップして評価";
+  document.getElementById("fb-comment").value="";
+  document.getElementById("fb-submit-btn").disabled=false;
+  document.getElementById("fb-submit-btn").textContent="感想を送る 🌿";
+
+  /* 画面切替 */
+  document.getElementById("screen-game").classList.remove("active");
+  document.getElementById("screen-feedback").classList.add("active");
+  window.scrollTo(0,0);
+}
+
+function closeFeedback(){
+  document.getElementById("screen-feedback").classList.remove("active");
+  document.getElementById("screen-game").classList.add("active");
+}
+
+function updateSlider(val){
+  fbData.change=parseInt(val);
+  document.getElementById("fb-change-label").textContent=SLIDER_LABELS[parseInt(val)];
+}
+
+function selectChoice(group, el, val){
+  /* グループ内の選択を切替 */
+  const parent=el.closest(".fb-choices,.fb-yn");
+  parent.querySelectorAll("button").forEach(b=>b.classList.remove("selected"));
+  el.classList.add("selected");
+  if(group==="action") fbData.action=val;
+  if(group==="continue") fbData.continueVal=val;
+}
+
+function selectStar(n){
+  fbData.stars=n;
+  document.querySelectorAll(".fb-star").forEach((el,i)=>{
+    el.classList.toggle("lit",i<n);
+  });
+  document.getElementById("fb-star-label").textContent=STAR_LABELS[n];
+}
+
+function submitFeedback(){
+  /* バリデーション */
+  if(!fbData.action){alert("余白アクションを選んでください。");return;}
+  if(!fbData.stars){alert("庭のアニメーションを評価してください。");return;}
+  if(!fbData.continueVal){alert("続けたいかどうかを選んでください。");return;}
+
+  const btn=document.getElementById("fb-submit-btn");
+  btn.disabled=true; btn.textContent="送信中…";
+
+  const payload={
+    timestamp: new Date().toLocaleString("ja-JP"),
+    totalBingos: state.totalBingos,
+    todayChecked: state.checked.filter((v,i)=>v&&!CELLS[i].free).length,
+    change: fbData.change,
+    changeLabel: SLIDER_LABELS[fbData.change],
+    action: fbData.action,
+    stars: fbData.stars,
+    continueVal: fbData.continueVal,
+    comment: document.getElementById("fb-comment").value,
+    season: getSeason(),
+    ua: navigator.userAgent.substring(0,80),
+  };
+
+  /* GAS URLが設定されているか確認 */
+  if(GAS_URL==="YOUR_GAS_URL_HERE"){
+    /* 未設定時はコンソールに出力してデモ完了表示 */
+    console.log("📋 送信データ（GAS未設定）:", payload);
+    showFeedbackDone();
+    return;
+  }
+
+  /* GASへ送信（no-corsなのでレスポンスは取れないが送信はされる） */
+  fetch(GAS_URL,{
+    method:"POST",
+    mode:"no-cors",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload),
+  }).then(()=>{
+    showFeedbackDone();
+  }).catch(()=>{
+    /* ネットワークエラーでもno-corsなら成功扱いが多い */
+    showFeedbackDone();
+  });
+}
+
+function showFeedbackDone(){
+  const fb=document.getElementById("screen-feedback");
+  fb.innerHTML=`
+    <div class="fb-done">
+      <div class="fb-done-emoji">🌸</div>
+      <div class="fb-done-title">ありがとうございました</div>
+      <div class="fb-done-msg">あなたの感想が、次の余白をつくる力になります。<br>これからも、小さな余白を見つけていきましょう。</div>
+      <button class="btn btn-primary" onclick="closeFeedbackDone()" style="padding:12px 36px;font-size:14px;">庭にもどる</button>
+    </div>`;
+}
+
+function closeFeedbackDone(){
+  /* 感想画面を再構築してからゲームへ */
+  location.reload();
+}
+</script>
+</body>
+</html>
